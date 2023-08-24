@@ -1,95 +1,103 @@
-import Image from 'next/image'
-import styles from './page.module.css'
+"use client";
+import { useEffect, useState } from "react";
+import { Survey } from "./models/survey.model";
+import DatePicker from "react-datepicker";
 
 export default function Home() {
+  const surveyTemplateId = 1;
+  const [data, setData] = useState<Survey>(null!);
+  const [isLoading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`https://localhost:7099/api/v1/surveyTemplate/${surveyTemplateId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setData(data);
+        setLoading(false);
+      });
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    let formData = {
+      surveyTemplateId,
+      social: 'Website',
+      surveyForms:  data.surveyTemplateForms.map(f => ({
+        type: f.type,
+        keyName: f.keyName,
+        label: f.label,
+        value: f.type === 'Date' ? new Date().toISOString() : String(f.value),
+        sequence: f.sequence
+      }))
+    };
+    const res = await fetch("https://localhost:7099/api/v1/survey", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    });
+  };
+
+  const handleFormChange = (index, e) => {
+    let change = data;
+    if (change.surveyTemplateForms[index]) {
+      change.surveyTemplateForms[index].value = e.target.value;
+      setData(change);
+    }
+  };
+
+  const handleFormDateChange = (index, date) => {
+    let change = data;
+    if (change.surveyTemplateForms[index]) {
+      change.surveyTemplateForms[index].value = date;
+      setData(change);
+    }
+  };
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <main>
+      <div className="row">
+        <div className="col-md-4 col-sm-6">
+          <form onSubmit={handleSubmit}>
+            <h1 className="title">Survey Title: {data?.name}</h1>
+            {data?.surveyTemplateForms.map((input, index) => {
+              if (input.type === "Date") {
+                return (
+                  <div className="form-group" key={index}>
+                    <label htmlFor={input.keyName}>{input.label}</label>
+                    <div>
+                      <DatePicker
+                        name={input.keyName}
+                        className="form-control"
+                        dateFormat="yyyy-MM-dd"
+                        onChange={(e) => handleFormDateChange(index, e)}
+                      />
+                    </div>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="form-group" key={index}>
+                    <label htmlFor={input.keyName}>{input.label}</label>
+                    <input
+                      type={input.type.toLowerCase()}
+                      name={input.keyName}
+                      onChange={(e) => handleFormChange(index, e)}
+                      className="form-control"
+                    />
+                  </div>
+                );
+              }
+            })}
+            <div className="mt-3">
+              <button type="submit" className="btn btn-primary">
+                Send
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
     </main>
-  )
+  );
 }
